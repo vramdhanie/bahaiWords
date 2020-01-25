@@ -1,31 +1,24 @@
-from numpy import loadtxt
-from nltk.corpus import stopwords
-from nltk.tokenize import sent_tokenize, word_tokenize
-import nltk
-nltk.download('stopwords')
-nltk.download('punkt')
+from bs4 import BeautifulSoup
+import requests
 
+data = ''
 
-# Fetch the data from the web
-data = "O SON OF SPIRIT!My first counsel is this: Possess a pure, kindly and radiant heart, that thine may be a sovereignty ancient, imperishable and everlasting. O SON OF SPIRIT!The best beloved of all things in My sight is Justice; turn not away therefrom if thou desirest Me, and neglect it not that I may confide in thee. By its aid thou shalt see with thine own eyes and not through the eyes of others, and shalt know of thine own knowledge and not through the knowledge of thy neighbor. Ponder this in thy heart; how it behooveth thee to be. Verily justice is My gift to thee and the sign of My loving-kindness. Set it then before thine eyes. Veiled in My immemorial being and in the ancient eternity of My essence, I knew My love for thee; therefore I created thee, have engraved on thee Mine image and revealed to thee My beauty Thy Paradise is My love; thy heavenly home, reunion with Me. Enter therein and tarry not. This is that which hath been destined for thee in Our kingdom above and Our exalted dominion. If thou lovest Me, turn away from thyself; and if thou seekest My pleasure, regard not thine own; that thou mayest die in Me and I may eternally live in thee."
+url = 'https://www.bahai.org/library/authoritative-texts/downloads'
+response = requests.get(url)
 
-# configure nltk with stop words
-stopWords = set(stopwords.words('english'))
+# make sure we got a valid response
+if(response.ok):
+    # get the full data from the response
+    text = response.text
 
-# load additional stopwords
-additionalWords = loadtxt("words.dat", delimiter='\n', dtype=str)
-print(additionalWords)
-stopWords.update(additionalWords)
+    soup = BeautifulSoup(text, 'html.parser')
+    alist = soup.find_all('a', title=True)
+    links = [a['href']
+             for a in alist if a['title'].find("HTML") > -1]
+    for link in links:
+        page = requests.get("https://www.bahai.org" + link)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        data = data + ' ' + soup.get_text()
 
-# perform the word search
-words = word_tokenize(data)
-wordsFiltered = []
-
-for w in words:
-    if w.lower() not in stopWords:
-        wordsFiltered.append(w)
-
-# Output the results
-with open("results.dat", "w") as f:
-    for w in set(wordsFiltered):
-        f.write(w + '\n')
+    with open("source.txt", "w") as f:
+        f.write(data)
